@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TileType = "empty" | "road" | "road-h" | "house" | "villa" | "mansion" | "sunflower" | "tree" | "market" | "fountain";
@@ -20,14 +20,7 @@ interface Player {
   color: string;
 }
 
-interface ChatMessage {
-  id: string;
-  playerId: string;
-  playerName: string;
-  playerColor: string;
-  text: string;
-  time: string;
-}
+
 
 interface FloatingText {
   id: string;
@@ -53,18 +46,7 @@ const BUILD_ITEMS = [
   { type: "tree" as TileType, label: "Дерево", cost: 10, glory: 5, emoji: "🌲", desc: "Зелень для украшения" },
 ];
 
-const BOT_NAMES = ["Алексей", "Мария", "Дмитрий", "Анна", "Сергей", "Елена"];
-const BOT_COLORS = ["#ff6b6b", "#4ecdc4", "#a29bfe", "#fd79a8", "#fdcb6e", "#55efc4"];
-const BOT_MESSAGES = [
-  "Смотрите какой дом построил! 😍",
-  "Кто хочет обменяться ресурсами?",
-  "Мой подсолнух уже вырос! 🌻",
-  "Взрываю постройку — +слава!",
-  "Кто топ по авторитету?",
-  "Строю рынок рядом с дорогой!",
-  "Красивый город получается 🏙️",
-  "Нужны ресурсы для виллы!",
-];
+
 
 function makeTile(type: TileType, level = 1, owner?: string): Tile {
   return { id: Math.random().toString(36).slice(2), type, level, owner };
@@ -212,15 +194,8 @@ export default function Index() {
   const [selectedTile, setSelectedTile] = useState<number | null>(null);
   const [selectedBuild, setSelectedBuild] = useState<typeof BUILD_ITEMS[0] | null>(null);
   const [activeTab, setActiveTab] = useState<"game" | "profile" | "shop" | "leaders" | "achievements">("game");
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "1", playerId: "p3", playerName: "Дмитрий", playerColor: "#a29bfe", text: "Всем привет! 🏙️", time: "10:30" },
-    { id: "2", playerId: "p1", playerName: "Алексей", playerColor: "#ff6b6b", text: "Строю рынок рядом с дорогой!", time: "10:31" },
-    { id: "3", playerId: "p2", playerName: "Мария", playerColor: "#4ecdc4", text: "Подсолнух вырос 🌻 +15 слава!", time: "10:32" },
-  ]);
-  const [chatInput, setChatInput] = useState("");
   const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
   const [notification, setNotification] = useState<string | null>(null);
-  const chatRef = useRef<HTMLDivElement>(null);
   const notifTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const showNotif = useCallback((msg: string) => {
@@ -235,24 +210,6 @@ export default function Index() {
     setTimeout(() => setFloatingTexts(prev => prev.filter(f => f.id !== id)), 1400);
   };
 
-  // Bot chat
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() > 0.45) {
-        const bot = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-        const color = BOT_COLORS[Math.floor(Math.random() * BOT_COLORS.length)];
-        const text = BOT_MESSAGES[Math.floor(Math.random() * BOT_MESSAGES.length)];
-        const now = new Date();
-        setChatMessages(prev => [...prev.slice(-40), {
-          id: Math.random().toString(36).slice(2),
-          playerId: bot, playerName: bot, playerColor: color, text,
-          time: `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`,
-        }]);
-      }
-    }, 4500);
-    return () => clearInterval(interval);
-  }, []);
-
   // Sunflower growth
   useEffect(() => {
     const interval = setInterval(() => {
@@ -262,11 +219,6 @@ export default function Index() {
     }, 8000);
     return () => clearInterval(interval);
   }, []);
-
-  // Auto-scroll chat
-  useEffect(() => {
-    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [chatMessages]);
 
   const handleTileClick = (idx: number) => {
     const tile = grid[idx];
@@ -335,16 +287,6 @@ export default function Index() {
     addFloat(selectedTile % GRID_W, Math.floor(selectedTile / GRID_W), `+${resources}🪙 +15⭐`, "#4ecdc4");
     showNotif(`🌻 Собрано! +${resources} ресурсов, +15 слава`);
     setSelectedTile(null);
-  };
-
-  const handleSendChat = () => {
-    if (!chatInput.trim()) return;
-    const now = new Date();
-    setChatMessages(prev => [...prev, {
-      id: Math.random().toString(36).slice(2), playerId: "me", playerName: "Вы", playerColor: "#f5c518",
-      text: chatInput.trim(), time: `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`,
-    }]);
-    setChatInput("");
   };
 
   const sortedPlayers = [...players, { ...me }].sort((a, b) => b.glory - a.glory);
@@ -467,66 +409,35 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Right sidebar */}
-            <div className="w-52 flex-shrink-0 border-l border-yellow-900/30 flex flex-col" style={{ background: "#0a140a" }}>
-              {/* Tile action */}
-              {selectedT && selectedT.type !== "empty" && selectedT.type !== "road" && selectedT.type !== "road-h" && (
-                <div className="panel-enter p-3 border-b border-yellow-900/30">
-                  <p className="text-xs font-bold mb-2" style={{ color: "#f5c518" }}>
-                    {selectedT.type === "house" ? "🏠 Дом" : selectedT.type === "villa" ? "🏡 Вилла" :
-                     selectedT.type === "mansion" ? "🏰 Особняк" : selectedT.type === "sunflower" ? "🌻 Подсолнух" :
-                     selectedT.type === "market" ? "🏪 Рынок" : selectedT.type === "fountain" ? "⛲ Фонтан" : "🌲 Дерево"}
-                    <span className="text-gray-500 font-normal"> {selectedT.owner && `(${selectedT.owner})`}</span>
-                  </p>
-                  <div className="flex flex-col gap-1.5">
-                    {selectedT.owner === "Вы" && selectedT.type !== "tree" && selectedT.type !== "mansion" && (
-                      <button onClick={handleUpgrade} className="w-full px-2 py-1.5 rounded text-xs font-semibold transition-all" style={{ background: "rgba(29,78,216,0.3)", border: "1px solid rgba(59,130,246,0.4)", color: "#93c5fd" }}>
-                        ⬆️ Улучшить ({selectedT.level * 60}🪙)
-                      </button>
-                    )}
-                    {(selectedT.type === "sunflower" || selectedT.type === "tree") && (
-                      <button onClick={handleHarvest} className="w-full px-2 py-1.5 rounded text-xs font-semibold transition-all" style={{ background: "rgba(21,128,61,0.3)", border: "1px solid rgba(34,197,94,0.4)", color: "#86efac" }}>
-                        🌾 Собрать урожай
-                      </button>
-                    )}
-                    <button onClick={handleExplode} className="w-full px-2 py-1.5 rounded text-xs font-semibold transition-all" style={{ background: "rgba(153,27,27,0.3)", border: "1px solid rgba(239,68,68,0.4)", color: "#fca5a5" }}>
-                      💥 Взорвать {selectedT.owner !== "Вы" ? "(+40⭐)" : "(+20⭐)"}
-                    </button>
-                    <button onClick={() => setSelectedTile(null)} className="w-full px-2 py-1 rounded text-xs transition-all" style={{ background: "rgba(55,65,81,0.3)", color: "#6b7280" }}>
-                      ✕ Закрыть
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Chat */}
-              <div className="flex flex-col flex-1 overflow-hidden">
-                <p className="text-[9px] text-gray-600 uppercase tracking-widest font-bold px-3 py-2 border-b border-yellow-900/20">
-                  💬 Общий чат
+            {/* Right sidebar: tile actions only */}
+            {selectedT && selectedT.type !== "empty" && selectedT.type !== "road" && selectedT.type !== "road-h" && (
+              <div className="w-48 flex-shrink-0 border-l border-yellow-900/30 panel-enter p-3" style={{ background: "#0a140a" }}>
+                <p className="text-xs font-bold mb-2" style={{ color: "#f5c518" }}>
+                  {selectedT.type === "house" ? "🏠 Дом" : selectedT.type === "villa" ? "🏡 Вилла" :
+                   selectedT.type === "mansion" ? "🏰 Особняк" : selectedT.type === "sunflower" ? "🌻 Подсолнух" :
+                   selectedT.type === "market" ? "🏪 Рынок" : selectedT.type === "fountain" ? "⛲ Фонтан" : "🌲 Дерево"}
+                  <span className="text-gray-500 font-normal"> {selectedT.owner && `(${selectedT.owner})`}</span>
                 </p>
-                <div ref={chatRef} className="flex-1 overflow-y-auto p-2 flex flex-col gap-1">
-                  {chatMessages.map(msg => (
-                    <div key={msg.id} className="chat-msg text-[10px] leading-relaxed">
-                      <span className="font-bold" style={{ color: msg.playerColor }}>{msg.playerName}: </span>
-                      <span className="text-gray-400">{msg.text}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-1 p-2 border-t border-yellow-900/20">
-                  <input
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleSendChat()}
-                    placeholder="Написать..."
-                    className="flex-1 px-2 py-1 rounded text-[11px] text-gray-300 placeholder-gray-700 outline-none"
-                    style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(74,120,74,0.3)" }}
-                  />
-                  <button onClick={handleSendChat} className="px-2 py-1 rounded text-black text-xs font-bold transition-all" style={{ background: "#f5c518" }}>
-                    ➤
+                <div className="flex flex-col gap-1.5">
+                  {selectedT.owner === "Вы" && selectedT.type !== "tree" && selectedT.type !== "mansion" && (
+                    <button onClick={handleUpgrade} className="w-full px-2 py-1.5 rounded text-xs font-semibold transition-all" style={{ background: "rgba(29,78,216,0.3)", border: "1px solid rgba(59,130,246,0.4)", color: "#93c5fd" }}>
+                      ⬆️ Улучшить ({selectedT.level * 60}🪙)
+                    </button>
+                  )}
+                  {(selectedT.type === "sunflower" || selectedT.type === "tree") && (
+                    <button onClick={handleHarvest} className="w-full px-2 py-1.5 rounded text-xs font-semibold transition-all" style={{ background: "rgba(21,128,61,0.3)", border: "1px solid rgba(34,197,94,0.4)", color: "#86efac" }}>
+                      🌾 Собрать урожай
+                    </button>
+                  )}
+                  <button onClick={handleExplode} className="w-full px-2 py-1.5 rounded text-xs font-semibold transition-all" style={{ background: "rgba(153,27,27,0.3)", border: "1px solid rgba(239,68,68,0.4)", color: "#fca5a5" }}>
+                    💥 Взорвать {selectedT.owner !== "Вы" ? "(+40⭐)" : "(+20⭐)"}
+                  </button>
+                  <button onClick={() => setSelectedTile(null)} className="w-full px-2 py-1 rounded text-xs transition-all" style={{ background: "rgba(55,65,81,0.3)", color: "#6b7280" }}>
+                    ✕ Закрыть
                   </button>
                 </div>
               </div>
-            </div>
+            )}
           </>
         )}
 
